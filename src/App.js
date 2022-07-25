@@ -1,7 +1,7 @@
 /* src/App.js */
 import React, { useEffect, useState } from "react";
 import { Amplify, API, graphqlOperation } from "aws-amplify";
-import { createTodo } from "./graphql/mutations";
+import { createTodo, deleteTodo, updateTodo } from "./graphql/mutations";
 import { listTodos } from "./graphql/queries";
 import { withAuthenticator, Button, Heading } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
@@ -33,7 +33,7 @@ const App = ({ signOut, user }) => {
     }
   }
 
-  async function addTodo() {
+  const addTodo = async () => {
     try {
       if (!formState.name || !formState.description) return;
       const todo = { ...formState };
@@ -43,11 +43,39 @@ const App = ({ signOut, user }) => {
     } catch (err) {
       console.log("error creating todo:", err);
     }
-  }
+  };
+
+  const removeTodo = async (todo) => {
+    try {
+      // only id is needed for deleting
+      const todoDetails = {
+        id: todo.id,
+      };
+      await API.graphql(graphqlOperation(deleteTodo, { input: todoDetails }));
+    } catch (err) {
+      console.log("error deleting todo:", err);
+    }
+  };
+
+  const modifyTodo = async (todo) => {
+    try {
+      // only id is needed for deleting, rest is optional
+      const todoDetails = {
+        id: todo.id,
+        description: "My updated description!",
+        name: "my updated name!",
+      };
+      await API.graphql(graphqlOperation(updateTodo, { input: todoDetails }));
+    } catch (err) {
+      console.log("error deleting todo:", err);
+    }
+  };
+  console.log(user.attributes.email);
 
   return (
     <>
       <div style={styles.container}>
+        <Heading level={4}>Hello {user.attributes.email}</Heading>
         <h2>Amplify Todos</h2>
         <input
           onChange={(event) => setInput("name", event.target.value)}
@@ -68,9 +96,15 @@ const App = ({ signOut, user }) => {
           <div key={todo.id ? todo.id : index} style={styles.todo}>
             <p style={styles.todoName}>{todo.name}</p>
             <p style={styles.todoDescription}>{todo.description}</p>
+            <Button style={styles.button} onClick={() => removeTodo(todo)}>
+              DELETE
+            </Button>
+            <Button style={styles.button} onClick={() => modifyTodo(todo)}>
+              UPDATE
+            </Button>
           </div>
         ))}
-        <Heading level={1}>Hello {user.username}</Heading>
+
         <Button onClick={signOut}>Sign out</Button>
       </div>
     </>
